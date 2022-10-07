@@ -10,7 +10,7 @@ class CountBloomFilter[E](sizeOfBitSet: Int,
     numberOfHashes: Int,
     exceptedNumberOfElements: Int){
 
-    private var counter = new Array[Byte](sizeOfBitSet)
+    protected var counter = new Array[Byte](sizeOfBitSet)
 
     /**
      * Construct an empty Count Bloom Filter from the given number
