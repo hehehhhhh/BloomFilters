@@ -1,28 +1,29 @@
 import java.nio.charset.Charset
 import java.security.MessageDigest
+import scala.collection.mutable
+import scala.collection.mutable.BitSet.fromSpecific
 
-class BloomFilter[E] (sizeOfBitArray: Int,
+
+class BloomFilter[E] (sizeOfBitSet: Int,
                    numberOfHashes: Int,
-                   exceptedNumberOfElements: Int,
-                   bitArray: Array[Boolean]) {
+                   exceptedNumberOfElements: Int
+                   ) extends Serializable{
 
-    private var numberOfAddedElements = 0
-    private val digestFunction: MessageDigest = java.security.MessageDigest.getInstance("MD5")
-    private val charset = Charset.forName("UTF-8")
+    protected var bitSet = new mutable.BitSet(sizeOfBitSet)
+    protected var numberOfAddedElements = 0
+    protected var digestFunction: MessageDigest = java.security.MessageDigest.getInstance("MD5")
+    protected var charset: Charset = Charset.forName("UTF-8")
 
     /**
-     * Constructs an empty Bloom filter from the given BitArray
-     * size and the number of hash functions.
+     * Construct an empty Bloom Filter from the given number
+     * of bits per element, excepted number of elements and the
+     * number of hash functions.
      *
-     * @param sizeOfBitArray size of BitArray
+     * @param numberOfBitsPerElement number of bits per element
+     * @param exceptedNumberOfElements excepted number of elements
      * @param numberOfHashes number of hash functions
-     * @param exceptedNumberOfElements excepted number of element
      */
-    def this(sizeOfBitArray: Int, numberOfHashes: Int, exceptedNumberOfElements: Int) = {
-        this(sizeOfBitArray, numberOfHashes, exceptedNumberOfElements, new Array[Boolean](sizeOfBitArray))
-    }
-
-    private def this(numberOfBitsPerElement: Double, exceptedNumberOfElements: Int, numberOfHashes: Int) = {
+    def this(numberOfBitsPerElement: Double, exceptedNumberOfElements: Int, numberOfHashes: Int) = {
         this(Math.ceil(numberOfBitsPerElement * exceptedNumberOfElements).toInt,
             numberOfHashes,
             exceptedNumberOfElements
@@ -30,7 +31,7 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * Constructs an empty Bloom filter from the given excepted
+     * Construct an empty Bloom Filter from the given excepted
      * number of elements and false positive probability. The
      * number of hash functions is estimate to match the false
      * positive probability.
@@ -46,31 +47,32 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * Constructs an new Bloom filter from a existing Bloom Filter data
+     * Construct an new Bloom filter from a existing Bloom Filter data
      *
-     * @param sizeOfBitArray size of BitArray
+     * @param sizeOfBitSet size of BitSet
      * @param numberOfHashes number of hash functions
      * @param otherBloomFilter another bloom filter
      */
-    def this(sizeOfBitArray: Int, numberOfHashes: Int, otherBloomFilter: BloomFilter[E]) = {
-        this(sizeOfBitArray,
+    def this(sizeOfBitSet: Int, numberOfHashes: Int, otherBloomFilter: BloomFilter[E]) = {
+        this(sizeOfBitSet,
             numberOfHashes,
-            otherBloomFilter.getExceptedNumberOfElements,
-            otherBloomFilter.getBitArray.clone()
+            otherBloomFilter.getExceptedNumberOfElements
         )
+
+        this.bitSet = otherBloomFilter.getBitSet
     }
 
     /**
-     * get the size of BitArray in this Bloom Filter
+     * Get the size of BitSet in this Bloom Filter
      *
-     * @return size of BitArray
+     * @return size of BitSet
      */
-    def getSizeOfBitArray: Int = {
-        sizeOfBitArray
+    def getSizeOfBitSet: Int = {
+        sizeOfBitSet
     }
 
     /**
-     * get the number of hash functions in this Bloom Filter
+     * Get the number of hash functions in this Bloom Filter
      *
      * @return number of hash functions
      */
@@ -79,7 +81,7 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * get the excepted number of elements of this Bloom Filter
+     * Get the excepted number of elements of this Bloom Filter
      *
      * @return excepted number of elements
      */
@@ -88,16 +90,16 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * get the BitArray used in this Bloom Filter
+     * Get the BitSet used in this Bloom Filter
      *
-     * @return BitArray
+     * @return BitSet
      */
-    def getBitArray: Array[Boolean] = {
-        bitArray
+    def getBitSet: mutable.BitSet = {
+        bitSet
     }
 
     /**
-     * get the number of elements already in this Bloom Filter
+     * Get the number of elements already in this Bloom Filter
      *
      * @return number of added elements
      */
@@ -112,22 +114,32 @@ class BloomFilter[E] (sizeOfBitArray: Int,
      * @return true if the bit is set, false if it is not.
      */
     def getBit(bit: Int): Boolean = {
-        bitArray(bit)
+        bitSet(bit)
     }
 
     /**
-     * Set a single bit in this Bloom Filter.
+     * Set the the digest algorithm.
+     * Default is MD5, change to SHA-1 if necessary.
      *
-     * @param bit   is the bit to set.
-     * @param value If true, the bit is set. If false, the bit is cleared.
+     * @param algorithm digest algorithm
      */
-    def setBit(bit: Int, value: Boolean): Unit = {
-        bitArray.update(bit, value)
+    def setDigestFunction(algorithm: String = "MD5"): Unit = {
+        digestFunction = java.security.MessageDigest.getInstance(algorithm)
     }
 
     /**
-     * Calculates the expected probability of false positives based on the
-     * expected number of elements and the size of BitArray of this Bloom Filter.
+     * Set the charset of this Bloom Filter.
+     * Default is UTF-8, change it if necessary.
+     *
+     * @param charsetName name of charset
+     */
+    def setCharSet(charsetName: String = "UTF-8"): Unit = {
+        charset = Charset.forName(charsetName)
+    }
+
+    /**
+     * Calculate the expected probability of false positives based on the
+     * expected number of elements and the size of BitSet of this Bloom Filter.
      * <br /><br />
      * The value returned by this method is the <i>expected</i> probability
      * of false positives, assuming the number of added elements equals the
@@ -142,8 +154,8 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * Calculates the current probability of false positives based on the
-     * number of added elements and the size of BitArray of this Bloom Filter.
+     * Calculate the current probability of false positives based on the
+     * number of added elements and the size of BitSet of this Bloom Filter.
      *
      * @return probability of false positives.
      */
@@ -159,19 +171,19 @@ class BloomFilter[E] (sizeOfBitArray: Int,
      * @return probability of a false positive.
      */
     def getFalsePositiveProbability(number: Int): Double = {
-        Math.pow(1 - Math.exp(-numberOfHashes * number.toDouble / sizeOfBitArray.toDouble), numberOfHashes)
+        Math.pow(1 - Math.exp(-numberOfHashes * number.toDouble / sizeOfBitSet.toDouble), numberOfHashes)
     }
 
     /**
-     * Sets all bits to false in this Bloom Filter.
+     * Set all bits to false in this Bloom Filter.
      */
     def clear(): Unit = {
-        bitArray.map(_ => false)
+        bitSet.clear()
         numberOfAddedElements = 0
     }
 
     /**
-     * Generates digests based on the contents of an array of bytes and
+     * Generate digests based on the contents of an array of bytes and
      * splits the result into 4-byte Int's and store them in an array. The
      * digest function is called until the required number of Int's are
      * produced. For each call to digest a salt is prepended to the data.
@@ -215,28 +227,35 @@ class BloomFilter[E] (sizeOfBitArray: Int,
     }
 
     /**
-     * Adds an element to this Bloom Filter. The output from the element's
+     * Add an element to this Bloom Filter. The output from the element's
      * toString() method is used as input of the hash functions.
      *
      * @param element an registered element of this Bloom Filter.
+     * @return true if the element has been successfully inserted
      */
-    def add(element: E): Unit = {
+    def add(element: E): Boolean = {
         add(element.toString.getBytes(charset))
     }
 
     /**
-     * Adds an array of bytes to this Bloom Filter.
+     * Add an array of bytes to this Bloom Filter.
      *
      * @param bytes array of bytes to add to this Bloom Filter.
+     * @return true if any position of BitSet has been changed.
      */
-    def add(bytes: Array[Byte]): Unit = {
+    def add(bytes: Array[Byte]): Boolean = {
         val hashes = createHashes(bytes)
+        var flag = false
 
-        for (hash <- hashes) {
-            bitArray.update(Math.abs(hash % sizeOfBitArray), true)
-        }
+        hashes.foreach(x => {
+            val index = Math.abs(x % sizeOfBitSet)
+            flag |= !bitSet(index)
+            bitSet.update(index, true)
+        })
 
         numberOfAddedElements += 1
+
+        flag
     }
 
     /**
@@ -244,10 +263,8 @@ class BloomFilter[E] (sizeOfBitArray: Int,
      *
      * @param elements Array of elements.
      */
-    def addAll(elements: Array[_ <: E]): Unit = {
-        for (element <- elements) {
-            add(element)
-        }
+    def addAll(elements: Iterable[_ <: E]): Unit = {
+        elements.foreach(add)
     }
 
     /**
@@ -267,19 +284,13 @@ class BloomFilter[E] (sizeOfBitArray: Int,
      * See currentFalsePositiveProbability to calculate the probability of this
      * being correct.
      *
-     * @param bytes array of bytes to check.
+     * @param bytes Array of bytes to check.
      * @return true if the array has been inserted into the Bloom filter.
      */
     def contains(bytes: Array[Byte]): Boolean = {
         val hashes = createHashes(bytes)
 
-        for (hash <- hashes) {
-            if (!bitArray(Math.abs(hash % sizeOfBitArray))) {
-                return false
-            }
-        }
-
-        true
+        hashes.map(x => bitSet(Math.abs(x % sizeOfBitSet))).reduce(_ & _)
     }
 
     /**
@@ -290,20 +301,14 @@ class BloomFilter[E] (sizeOfBitArray: Int,
      * @param elements elements to check.
      * @return true if all the elements in c could have been inserted into the Bloom filter.
      */
-    def containsAll(elements: Array[_ <: E]): Boolean = {
-        for (element <- elements) {
-            if (!contains(element)) {
-                return false
-            }
-        }
-
-        true
+    def containsAll(elements: Iterable[_ <: E]): Boolean = {
+        elements.map(contains).reduce(_ & _)
     }
 
     override def toString: String = {
         s"""
-          |BloomFilter: {
-          | size of BitArray : $sizeOfBitArray
+          |$getClass: {
+          | size of BitSet : $sizeOfBitSet
           | number of hashes : $numberOfHashes
           | excepted number of elements : $exceptedNumberOfElements
           | number of added elements : $numberOfAddedElements
