@@ -81,8 +81,8 @@ class CountBloomFilter[E](sizeOfBitSet: Int,
     }
 
     override def clear(): Unit = {
-        super.clear()
-        counter.map(x => 0)
+        bitSet.clear()
+        counter = new Array[Byte](sizeOfBitSet)
     }
 
     /**
@@ -114,7 +114,7 @@ class CountBloomFilter[E](sizeOfBitSet: Int,
      * @return count of the element
      */
     def count(element: E): Int = {
-        count(element.toString.getBytes(charset))
+        count(element.toString.getBytes(getCharset))
     }
 
     /**
@@ -137,7 +137,7 @@ class CountBloomFilter[E](sizeOfBitSet: Int,
      * @return true if the element has been inserted
      */
     def remove (element: E): Boolean = {
-        remove(element.toString.getBytes(charset))
+        remove(element.toString.getBytes(getCharset))
     }
 
     /**

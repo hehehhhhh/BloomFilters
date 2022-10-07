@@ -11,8 +11,8 @@ class BloomFilter[E] (sizeOfBitSet: Int,
 
     protected var bitSet = new mutable.BitSet(sizeOfBitSet)
     protected var numberOfAddedElements = 0
-    protected var digestFunction: MessageDigest = java.security.MessageDigest.getInstance("MD5")
-    protected var charset: Charset = Charset.forName("UTF-8")
+    private var digestFunction: MessageDigest = java.security.MessageDigest.getInstance("MD5")
+    private var charset: Charset = Charset.forName("UTF-8")
 
     /**
      * Construct an empty Bloom Filter from the given number
@@ -115,6 +115,15 @@ class BloomFilter[E] (sizeOfBitSet: Int,
      */
     def getBit(bit: Int): Boolean = {
         bitSet(bit)
+    }
+
+    /**
+     * Get the charset of this Bloom Filter
+     *
+     * @return charset
+     */
+    def getCharset: Charset = {
+        charset
     }
 
     /**
